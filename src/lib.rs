@@ -103,38 +103,7 @@ fn create_headless_display(config: &Config) -> Result<glium::HeadlessRenderer, B
     // If there is no X server or Wayland, creating the event loop will fail first.
     // If this happens we catch the panic and fall back to osmesa software rendering, which doesn't require an event loop.
     // TODO: Submit PR upstream to stop panicing
-    let event_loop_result: Result<EventLoop<()>, _> =
-        panic::catch_unwind(|| EventLoopBuilder::new().with_any_thread(true).build());
-
-    match event_loop_result {
-        Ok(event_loop) => {
-            context = {
-                // Try surfaceless, headless, and osmesa in that order
-                // This is the procedure recommended in
-                // https://github.com/rust-windowing/glutin/blob/bab33a84dfb094ff65c059400bed7993434638e2/glutin_examples/examples/headless.rs
-                match cb.clone().build_surfaceless(&event_loop) {
-                    Ok(c) => c,
-                    Err(e) => {
-                        warn!("Unable to create surfaceless GL context. Trying headless instead. Reason: {:?}", e);
-                        match cb.clone().build_headless(&event_loop, size) {
-                            Ok(c) => c,
-                            Err(e) => {
-                                warn!("Unable to create headless GL context. Trying osmesa software renderer instead. Reason: {:?}", e);
-                                cb.build_osmesa(size)?
-                            }
-                        }
-                    }
-                }
-            };
-        }
-        Err(e) => {
-            warn!(
-                "No Wayland or X server. Falling back to osmesa software rendering. Reason {:?}",
-                e
-            );
-            context = cb.build_osmesa(size)?;
-        }
-    };
+    context = cb.build_osmesa(size)?;
 
     let context = unsafe { context.treat_as_current() };
     let display = glium::backend::glutin::headless::Headless::new(context)?;
@@ -350,18 +319,7 @@ pub fn render_to_image(config: &Config) -> Result<image::DynamicImage, Box<dyn E
                 "Unable to create headless GL context. Trying hidden window instead. Reason: {:?}",
                 e
             );
-            let (display, _) = create_normal_display(config)?;
-            let texture = glium::Texture2d::empty(&display, config.width, config.height).unwrap();
-            let depthtexture =
-                glium::texture::DepthTexture2d::empty(&display, config.width, config.height)
-                    .unwrap();
-            let mut framebuffer = glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(
-                &display,
-                &texture,
-                &depthtexture,
-            )
-            .unwrap();
-            render_pipeline(&display, config, &mesh, &mut framebuffer, &texture)
+            panic!("no rendering device")
         }
     };
 
